@@ -1,0 +1,223 @@
+<h1>Pokédex</h1>
+<!-- List of pokemon -->
+<ul class="pokedex-list">
+ 
+  <% @pokemon.each do |pkmn| %>
+  <li>
+    <button class="js-show-pokemon btn btn-link"
+    data-pokemon-uri="<%= pkmn["resource_uri"] %>">
+    <%= pkmn["name"] %>
+    </button>
+  </li>
+  <% end %>
+</ul>
+<!-- Pokemon modal view (hidden at first) -->
+<div class="modal fade pokemon-modal">
+  <div class="modal-dialog ">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button class="close" data-dismiss="modal">
+        <span>&times;</span>
+        </button>
+        <h3 class="modal-title">
+        <span class="titleSpan">NAME</span>
+        <small>NUMBER</small>
+        <span class="spanButton">
+        </span>
+        </h3>
+        </div><!-- .modal-header -->
+        <div class="modal-body">
+          
+              <dl class="dl-horizontal attributes">
+                <dt>ATTRIBUTE</dt>
+                <dd>VALUE</dd>
+              </dl>
+              
+          </div>
+        <div class="image">
+        </div>
+        </div><!-- .modal-body -->
+        </div><!-- .modal-content -->
+        </div><!-- .modal-dialog -->
+        </div><!-- .modal -->
+
+
+
+
+<style>
+  .image{
+    text-align: center;
+    padding-bottom: 30px;
+  }
+
+  .attacks{
+    background-color: red; 
+  }
+
+  .spanButton{
+    padding-left: 100px;
+  }
+
+	@font-face {
+	    font-family: 'pokemon_solidnormal';
+	    src: url('/assets/pokemon_solid-webfont.eot');
+	    src: url('/assets/pokemon_solid-webfont.eot?#iefix') format('embedded-opentype'),
+	         url('/assets/pokemon_solid-webfont.woff2') format('woff2'),
+	         url('/assets/pokemon_solid-webfont.woff') format('woff'),
+	         url('/assets/pokemon_solid-webfont.ttf') format('truetype'),
+	         url('/assets/pokemon_solid-webfont.svg#pokemon_solidnormal') format('svg');
+	    font-weight: normal;
+	    font-style: normal;
+	}
+
+	body {
+	  font-family: Helvetica, sans-serif;
+	}
+
+	h1 {
+	  font-size: 80px;
+	  font-weight: bold;
+	  text-align: center;
+	  margin: 40px;
+	  font-family: 'pokemon_solidnormal', Helvetica, sans-serif;
+	  color: #ffc100;
+	  -webkit-text-stroke: 3px #333996;
+	}
+
+	.pokedex-list {
+	  width: 300px;
+	  margin: 0 auto;
+	  padding-top: 20px;
+	  border: 4px solid #ffc100;
+	  border-radius: 10px;
+	  font-family: Verdana, sans-serif;
+	  list-style: none;
+
+	  img {
+	    width: 150px;
+	  }
+
+	  .btn-link {
+	    color: #313131;
+	    font-size: 20px;
+	    padding: 3px 0;
+	  }
+	  .btn-link:hover {
+	    color: #0f0f0f;
+	    font-size: 30px;
+	  }
+}
+
+  
+</style>
+
+<script type="text/javascript">
+    window.PokemonApp = {};
+
+    PokemonApp.Pokemon = function(uri) {
+      this.id = PokemonApp.idFromUri(uri);
+    };
+
+    PokemonApp.renderDetails = function(data, details){
+      $('.titleSpan').text(data.name);
+      $('.modal-title small').text(data.pkdx_id);
+
+      details.empty();
+      details.append($('<dt>').text('Height'));
+
+      details.append($('<dd>').text(data.height));
+      details.append($('<dt>').text('Weight'));
+      details.append($('<dd>').text(data.weight));
+      details.append($('<dt>').text('HP'));
+      details.append($('<dd>').text(data.hp));
+      details.append($('<dt>').text('Attack'));
+      details.append($('<dd>').text(data.attack));
+      details.append($('<dt>').text('Defense'));
+      details.append($('<dd>').text(data.defense));
+      details.append($('<dt>').text('Description:'));
+    }
+
+    PokemonApp.renderDescription = function(data, details){
+      description_uri = data.descriptions[0].resource_uri;
+      $.ajax({
+                
+        url: "http://pokeapi.co"+description_uri,
+        success: function(data){
+          details.append($('<dd>').text(data.description));
+
+        }
+      })
+    }
+
+
+    PokemonApp.renderImage = function(data){
+      $('.image').empty()
+      $('.image').append('<img src="http://img.pokemondb.net/artwork/'+ data.name.toLowerCase() +'.jpg">')
+    }
+
+    PokemonApp.renderTypes = function(data, details){
+      
+      details.append($('<dt>').text('Types:'));
+      details.append($('<dd>').text('Water'))
+      
+      
+    }
+
+
+
+    PokemonApp.Pokemon.prototype.render = function(){
+      console.log("Displaying pokeome with ID" + this.id);
+
+      $.ajax({
+        url: '/api/pokemon/' + this.id,
+        success: function(data){
+          var details = $('.modal-body dl');
+          
+          $('.spanButton').empty();
+          PokemonApp.renderDetails(data, details);
+          
+          PokemonApp.renderDescription(data, details);
+          PokemonApp.renderImage(data);
+
+          if(data.evolutions[0]){
+            $('.spanButton').append('<button class="btn btn-primary evolutions" data-pokemon-uri="'+ data.evolutions[0].resource_uri +'">Show Next Evolution </button>')
+          }
+
+          $('.pokemon-modal').modal('show');
+
+          $('.evolutions').click(function(){
+            var uri = $(this).data('pokemon-uri');
+
+            var pokemon = new PokemonApp.Pokemon(uri);
+            pokemon.render();
+          })
+        }
+      });
+    };
+
+
+
+    PokemonApp.idFromUri = function(uri){
+      var parts = uri.split('/');
+      var id = parts[parts.length - 2];
+      return id;
+    };
+
+    $(document).ready(function(){
+      $('.evolutions').show();
+
+      $('.js-show-pokemon').click(function(){
+        var uri = $(this).data('pokemon-uri');
+
+        var pokemon = new PokemonApp.Pokemon(uri);
+        pokemon.render();
+      })
+    })
+</script>
+
+
+
+
+
+
+
